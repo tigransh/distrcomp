@@ -1,43 +1,71 @@
-package em.eua.distrcomp.lesson3.ex1;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.Lock;
 
-public class CoordinatesSingleThread {
-    public static void main(String[] args) {
-        int[] person1Coord = new int[]{0, 0};
-        int[] person2Coord = new int[]{0, 0};
+class Walker implements Runnable {
+    private String name;
+    private int[] x;
+    private long time;
+    private static final ReentrantLock lock = new ReentrantLock();
 
+    public Walker(String name, int[] startingCoords, long time) {
+        this.name = name;
+        this.x = startingCoords;
+        this.time = time;
+    }
+
+    @Override
+    public void run() {
         while (true) {
-            System.out.println(getMessage("person1", person1Coord));
-            System.out.println(getMessage("person2", person2Coord));
-            person1Coord = calculateStep(person1Coord);
-            person2Coord = calculateStep(person2Coord);
+            if (!lock.isLocked()) {
+                System.out.println(getMessage(name, x));
+                x = calculateStep(x);
 
-            try {
-                Thread.sleep(200l);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+                // If person reaches [2,2], everyone else should wait for 3000ms
+                if (x[0] == 2 && x[1] == 2) {
+                    lock.tryLock();
+                    try {
+                        System.out.println(name + "  [2,2] everyone should wait");
+                        Thread.sleep(3000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    } finally {
+                        if (lock.isLocked()) {
+                            lock.unlock();
+                        }
+                    }
+                }
+
+                try {
+                    Thread.sleep(time);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
         }
     }
 
-    public static int[] calculateStep(int[] current) {
-        int step = (int) Math.floor(Math.random() * 4);
+    private int[] calculateStep(int[] current) {
+        int step = (int) Math.floor(Math.random() * 5);
         switch (step) {
             case 0:
                 return new int[]{current[0] - 1, current[1]};
-            case 1:
-                return new int[]{current[0] + 1, current[1]};
             case 2:
-                return new int[]{current[0], current[1] - 1};
+                return new int[]{current[0] + 1, current[1]};
             case 3:
+                return new int[]{current[0], current[1] - 1};
+            case 4:
                 return new int[]{current[0], current[1] + 1};
             default:
                 return current;
         }
     }
 
-    public static String getMessage(String person, int[] coord) {
-        return person + " is standing on [" + coord[0] + "," + coord[1] + "]";
+    private String getMessage(String person, int[] x) {
+        return person + " is standing on [" + x[0] + "," + x[1] + "]";
     }
 }
+
+
+
 
 
